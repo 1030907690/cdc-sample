@@ -1,1 +1,1 @@
-"# cdc-sample" 
+# cdc-sample 
