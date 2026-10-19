@@ -129,11 +129,54 @@
 		     内嵌引擎用 MemoryOffsetBackingStore 时完全不会连接 Kafka——
 		     它就是个纯 HashMap，重启后 offset 丢失。
 		     真正连 Kafka 的是 KafkaOffsetBackingStore，我们不用。
+
+		     排除项说明：下面排掉的都是「启动 Kafka Connect 分布式 worker」
+		     才需要的依赖（CLI 工具、broker 存储、log4j appender），内嵌引擎
+		     只做 binlog 监听 + 内存 offset，用不到它们。
+		     注意：Jetty/Jersey（REST API）暂不排除，因为 EmbeddedEngine 在
+		     初始化 WorkerConfig 时可能触发其类加载，排除有 ClassNotFound 风险。
 		-->
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
 			<artifactId>connect-runtime</artifactId>
 			<version>3.2.0</version>
+			<exclusions>
+				<!-- 引发 SLF4J 双绑定 WARN 的元凶（connect-runtime 自带 log4j），
+				     统一交给 Spring Boot 的 logback -->
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-reload4j</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>ch.qos.reload4j</groupId>
+					<artifactId>reload4j</artifactId>
+				</exclusion>
+				<!-- Kafka CLI 工具 + broker 存储，内嵌引擎不用 -->
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-tools</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-storage</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-storage-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-server-common</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-log4j-appender</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-tools-api</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- ============ MySQL JDBC Driver ============ -->
