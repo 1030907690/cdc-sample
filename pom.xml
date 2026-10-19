@@ -30,6 +30,7 @@
 		<java.version>17</java.version>
 		<flink.version>1.20.3</flink.version>
 		<flink-cdc.version>3.5.0</flink-cdc.version>
+		<debezium.version>1.9.8.Final</debezium.version>
 		<mysql.connector.version>8.4.0</mysql.connector.version>
 	</properties>
 	<dependencies>
@@ -99,6 +100,40 @@
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-connector-mysql-cdc</artifactId>
 			<version>${flink-cdc.version}</version>
+		</dependency>
+
+		<!-- ============ Debezium 内嵌引擎（纯 Java 方案，不走 Flink） ============
+		     版本 1.9.8.Final 与 Flink CDC 3.5 内部使用的 Debezium 版本一致，
+		     避免两套 Debezium API 并存导致类冲突。
+		-->
+		<dependency>
+			<groupId>io.debezium</groupId>
+			<artifactId>debezium-api</artifactId>
+			<version>${debezium.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.debezium</groupId>
+			<artifactId>debezium-embedded</artifactId>
+			<version>${debezium.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.debezium</groupId>
+			<artifactId>debezium-connector-mysql</artifactId>
+			<version>${debezium.version}</version>
+		</dependency>
+
+		<!-- ============ Kafka Connect Runtime ============
+		     重要澄清：引入 connect-runtime 不是要启动 Kafka Broker，
+		     而是因为 Debezium 1.x 架构重整后，OffsetBackingStore 接口 +
+		     MemoryOffsetBackingStore / FileOffsetBackingStore 实现类都在这里。
+		     内嵌引擎用 MemoryOffsetBackingStore 时完全不会连接 Kafka——
+		     它就是个纯 HashMap，重启后 offset 丢失。
+		     真正连 Kafka 的是 KafkaOffsetBackingStore，我们不用。
+		-->
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>connect-runtime</artifactId>
+			<version>3.2.0</version>
 		</dependency>
 
 		<!-- ============ MySQL JDBC Driver ============ -->

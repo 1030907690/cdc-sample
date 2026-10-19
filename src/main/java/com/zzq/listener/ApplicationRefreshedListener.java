@@ -1,5 +1,6 @@
 package com.zzq.listener;
 
+import com.zzq.cdc.DebeziumChangeDataCapture;
 import com.zzq.cdc.FlinkChangeDataCapture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,17 @@ import org.springframework.stereotype.Component;
  * 确保在所有 Bean 初始化完毕、所有初始化器执行完成、Web 容器就绪后才触发，
  * 且 Spring Boot 3.x 默认单层容器，不会重复触发。
  * </p>
+ *
+ * <h3>CDC 实现切换</h3>
+ * <p>
+ * 通过常量 {@link #CDC_IMPL} 选择监听实现：
+ * </p>
+ * <table>
+ *   <tr><th>值</th><th>实现类</th><th>说明</th></tr>
+ *   <tr><td>{@code "debezium"}</td><td>{@link DebeziumChangeDataCapture}</td><td>纯 Debezium 内嵌引擎，无 Flink 依赖，轻量</td></tr>
+ *   <tr><td>{@code "flink"}</td><td>{@link FlinkChangeDataCapture}</td><td>Flink CDC 3.5 DataStream API，功能完整但较重</td></tr>
+ * </table>
+ * <p>两种实现都监听 MySQL {@code jjjy181} 库的增删改，数据源配置相同。</p>
  */
 @Component
 public class ApplicationRefreshedListener {
@@ -21,25 +33,33 @@ public class ApplicationRefreshedListener {
     private static final Logger log = LoggerFactory.getLogger(ApplicationRefreshedListener.class);
 
     /**
-     * Spring Boot 完全就绪后触发，拉起 Flink CDC 监听任务。
+     * CDC 监听实现切换开关：{@code "debezium"} 或 {@code "flink"}。
      * <p>
-     * 注意：{@link FlinkChangeDataCapture#start()} 内部 env.execute() 是阻塞调用，
-     * 必须放到独立线程中执行，否则会阻塞 Spring 启动主线程导致 Tomcat 无法启动。
+     * 改完 IDE 里直接重启即可生效，不需要动 pom.xml。
      * </p>
+     */
+    private static final String CDC_IMPL = "debezium";
+
+    /**
+     * Spring Boot 完全就绪后触发，拉起 CDC 监听任务。
      */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady(ApplicationReadyEvent event) {
         log.info("========== Spring Boot 启动完成，拉起后置任务 ==========");
 
-        startFlinkCdc();
-
-        // 以后有其他启动后置任务，可在此追加
-        // startRocketMqConsumer();
-        // warmUpCache();
+        switch (CDC_IMPL) {
+            case "flink":
+                startFlinkCdc();
+                break;
+            case "debezium":
+            default:
+                startDebeziumCdc();
+                break;
+        }
     }
 
     /**
-     * 启动 Flink CDC 监听 MySQL jjjy181 库的增删改变更。
+     * 启动 Flink CDC 3.5 DataStream API 监听。
      */
     private void startFlinkCdc() {
         new Thread(() -> {
@@ -49,5 +69,18 @@ public class ApplicationRefreshedListener {
                 log.error("Flink CDC 启动或运行期间发生异常", e);
             }
         }, "flink-cdc-worker").start();
+    }
+
+    /**
+     * 启动 Debezium 内嵌引擎 CDC 监听（更轻量，不依赖 Flink）。
+     */
+    private void startDebeziumCdc() {
+        new Thread(() -> {
+            try {
+                new DebeziumChangeDataCapture().start();
+            } catch (Exception e) {
+                log.error("Debezium CDC 启动或运行期间发生异常", e);
+            }
+        }, "debezium-cdc-worker").start();
     }
 }
