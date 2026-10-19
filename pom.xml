@@ -57,50 +57,50 @@
 			<version>4.5.0</version>
 		</dependency>
 
-		<!-- ============ Flink DataStream API ============ -->
+		<!--&lt;!&ndash; ============ Flink DataStream API ============ &ndash;&gt;
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-streaming-java</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 
-		<!-- ============ Flink connector-base ============
+		&lt;!&ndash; ============ Flink connector-base ============
 		     Flink CDC 3.x (MySqlSource 新 Source API) 运行时依赖此模块，
 		     它提供了 RecordEmitter / SourceReaderBase 等核心类。
 		     显式声明避免传递依赖因 scope 或 dependencyManagement 被排除。
-		-->
+		&ndash;&gt;
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-connector-base</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 
-		<!-- ============ Flink clients ============
+		&lt;!&ndash; ============ Flink clients ============
 		     Flink 1.19+ 起 LocalStreamEnvironment.execute() 也通过 SPI 找 ExecutorFactory，
 		     LocalExecutor 实现类在此 jar 中。没有它就会报 "No ExecutorFactory found"。
-		-->
+		&ndash;&gt;
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-clients</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 
-		<!-- ============ Flink table-common ============
+		&lt;!&ndash; ============ Flink table-common ============
 		     MySqlSourceConfig.chunkKeyColumns 类型为 Map<ObjectPath, String>，
 		     ObjectPath 在 flink-table-common 中。序列化时会被引用，缺了会报 NoClassDefFoundError。
-		-->
+		&ndash;&gt;
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table-common</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 
-		<!-- ============ Flink CDC 3.5 MySQL Source ============ -->
+		&lt;!&ndash; ============ Flink CDC 3.5 MySQL Source ============ &ndash;&gt;
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-connector-mysql-cdc</artifactId>
 			<version>${flink-cdc.version}</version>
-		</dependency>
+		</dependency>-->
 
 		<!-- ============ Debezium 内嵌引擎（纯 Java 方案，不走 Flink） ============
 		     版本 1.9.8.Final 与 Flink CDC 3.5 内部使用的 Debezium 版本一致，

@@ -1,21 +1,21 @@
 package com.zzq.cdc;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.restartstrategy.RestartStrategies;
-import org.apache.flink.cdc.connectors.mysql.source.MySqlSource;
-import org.apache.flink.cdc.connectors.mysql.table.StartupOptions;
-import org.apache.flink.cdc.debezium.JsonDebeziumDeserializationSchema;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.RestOptions;
-import org.apache.flink.streaming.api.CheckpointingMode;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.ProcessFunction;
-import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+//
+//import com.fasterxml.jackson.databind.JsonNode;
+//import com.fasterxml.jackson.databind.ObjectMapper;
+//import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+//import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+//import org.apache.flink.cdc.connectors.mysql.source.MySqlSource;
+//import org.apache.flink.cdc.connectors.mysql.table.StartupOptions;
+//import org.apache.flink.cdc.debezium.JsonDebeziumDeserializationSchema;
+//import org.apache.flink.configuration.Configuration;
+//import org.apache.flink.configuration.RestOptions;
+//import org.apache.flink.streaming.api.CheckpointingMode;
+//import org.apache.flink.streaming.api.datastream.DataStreamSource;
+//import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+//import org.apache.flink.streaming.api.functions.ProcessFunction;
+//import org.apache.flink.util.Collector;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
 
 /**
  * Flink CDC 核心监听类：通过 Flink CDC 3.5 DataStream API 监听 MySQL jjjy181 库的增删改操作。
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * 因此 CDC 事件分发器设计为 {@code static} 内部类，避免隐式持有外部类引用导致序列化失败。</p>
  */
 public class FlinkChangeDataCapture {
-
+/*
     private static final Logger log = LoggerFactory.getLogger(FlinkChangeDataCapture.class);
 
     // ====== MySQL 连接配置常量 ======
@@ -51,7 +51,7 @@ public class FlinkChangeDataCapture {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /**
+    *//**
      * 启动 CDC 监听任务（阻塞方法，必须在独立线程中调用）。
      * <p>
      * API 用法参考 Flink CDC 官方文档：
@@ -60,7 +60,7 @@ public class FlinkChangeDataCapture {
      * </p>
      *
      * @throws Exception Flink 作业启动或运行期间的异常
-     */
+     *//*
     public void start() throws Exception {
         // 1. 创建执行环境
         //    createLocalEnvironment(conf) 显式指定本地模式。
@@ -108,19 +108,19 @@ public class FlinkChangeDataCapture {
 
     // ==================== 业务处理方法（static，供内部类调用） ====================
 
-    /** 处理 INSERT 操作（含全量快照阶段的 READ 操作）。 */
+    *//** 处理 INSERT 操作（含全量快照阶段的 READ 操作）。 *//*
     private static void handleInsert(String db, String table, JsonNode after) {
         log.info("[INSERT] db={}, 表={}, 新行={}", db, table, after);
         // TODO: 在此填充你的新增业务逻辑
     }
 
-    /** 处理 UPDATE 操作，同时拿到修改前和修改后。 */
+    *//** 处理 UPDATE 操作，同时拿到修改前和修改后。 *//*
     private static void handleUpdate(String db, String table, JsonNode before, JsonNode after) {
         log.info("[UPDATE] db={}, 表={}, 旧值={}, 新值={}", db, table, before, after);
         // TODO: 在此填充你的修改业务逻辑
     }
 
-    /** 处理 DELETE 操作。 */
+    *//** 处理 DELETE 操作。 *//*
     private static void handleDelete(String db, String table, JsonNode before) {
         log.info("[DELETE] db={}, 表={}, 旧行={}", db, table, before);
         // TODO: 在此填充你的删除业务逻辑
@@ -137,7 +137,7 @@ public class FlinkChangeDataCapture {
     // 这里逻辑与 FlinkChangeDataCapture 紧耦合（复用 MAPPER、log、三个 handle 方法），
     // 作为 static 内部类内聚性更好，避免跨文件跳转。
 
-    /**
+    *//**
      * Debezium JSON 事件解析 + 按操作类型分发处理器。
      * <p>
      * JSON envelope 结构：
@@ -149,7 +149,7 @@ public class FlinkChangeDataCapture {
      *   "source": { "db": "...", "table": "...", ... }
      * }
      * </pre>
-     */
+     *//*
     private static class CdcEventDispatcher extends ProcessFunction<String, Void> {
 
         @Override
@@ -183,5 +183,5 @@ public class FlinkChangeDataCapture {
                 log.error("解析 CDC 事件 JSON 失败: {}", json, e);
             }
         }
-    }
+    }*/
 }
