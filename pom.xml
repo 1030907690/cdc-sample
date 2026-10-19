@@ -131,10 +131,13 @@
 		     真正连 Kafka 的是 KafkaOffsetBackingStore，我们不用。
 
 		     排除项说明：下面排掉的都是「启动 Kafka Connect 分布式 worker」
-		     才需要的依赖（CLI 工具、broker 存储、log4j appender），内嵌引擎
-		     只做 binlog 监听 + 内存 offset，用不到它们。
-		     注意：Jetty/Jersey（REST API）暂不排除，因为 EmbeddedEngine 在
-		     初始化 WorkerConfig 时可能触发其类加载，排除有 ClassNotFound 风险。
+		     才需要的依赖（CLI 工具、broker 存储、log4j appender、REST API 的
+		     Jetty/Jersey、插件扫描的 Reflections），内嵌引擎只做 binlog 监听 +
+		     内存 offset，用不到它们。
+		     已反编译确认：EmbeddedEngine 只引用 WorkerConfig（且仅用 configure
+		     和 originalsStrings 两个方法），WorkerConfig 只依赖 kafka-clients +
+		     connect-runtime 自身，不引用 Jetty/Jersey/REST/Reflections。
+		     因此 Jetty/Jersey 组可安全排除。
 		-->
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
@@ -175,6 +178,57 @@
 				<exclusion>
 					<groupId>org.apache.kafka</groupId>
 					<artifactId>kafka-tools-api</artifactId>
+				</exclusion>
+				<!-- REST API 的 Jetty 全组（内嵌引擎不启动 Worker HTTP 服务） -->
+				<exclusion>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-server</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-servlet</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-servlets</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-client</artifactId>
+				</exclusion>
+				<!-- REST API 的 Jersey 全组 -->
+				<exclusion>
+					<groupId>org.glassfish.jersey.containers</groupId>
+					<artifactId>jersey-container-servlet</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.glassfish.jersey.inject</groupId>
+					<artifactId>jersey-hk2</artifactId>
+				</exclusion>
+				<!-- 插件扫描 / 认证 / XML 序列化，内嵌引擎不用 -->
+				<exclusion>
+					<groupId>org.reflections</groupId>
+					<artifactId>reflections</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.bitbucket.b_c</groupId>
+					<artifactId>jose4j</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.maven</groupId>
+					<artifactId>maven-artifact</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.jaxrs</groupId>
+					<artifactId>jackson-jaxrs-json-provider</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>javax.xml.bind</groupId>
+					<artifactId>jaxb-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>javax.activation</groupId>
+					<artifactId>activation</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
