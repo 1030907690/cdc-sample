@@ -10,12 +10,8 @@ import io.debezium.engine.format.Json;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Debezium 内嵌引擎 CDC 监听类：纯 Java 方式监听 MySQL jjjy181 库的增删改操作，无需 Flink。
@@ -45,8 +41,8 @@ public class DebeziumChangeDataCapture {
     private static final Logger log = LoggerFactory.getLogger(DebeziumChangeDataCapture.class);
 
     // ====== MySQL 连接配置常量（与 Flink CDC 方案相同） ======
-    private static final String HOST     = "192.168.10.131";
-    private static final String PORT     = "3306";
+    private static final String HOST     = "127.0.0.1";
+    private static final int    PORT     = 3306;
     private static final String USERNAME = "root";
     private static final String PASSWORD = "root";
     private static final String DATABASE = "jjjy181";
@@ -64,6 +60,9 @@ public class DebeziumChangeDataCapture {
 
     /**
      * 启动 Debezium CDC 监听（阻塞方法，必须在独立线程中调用）。
+     * <p>
+     * {@code run()} 会阻塞当前线程持续消费 binlog 变更，直到 {@link #stop()} 被调用。
+     * </p>
      *
      * @throws Exception 配置或运行异常
      */
@@ -77,25 +76,14 @@ public class DebeziumChangeDataCapture {
 
         log.info("Debezium CDC 引擎启动中，监听 MySQL {}:{} / {} ...", HOST, PORT, DATABASE);
 
-        // run() 会阻塞当前线程，持续消费 binlog 变更
-        ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "debezium-cdc-worker");
-            t.setDaemon(true);
-            return t;
-        });
-        executor.execute(() -> {
-            try {
-                engine.run();
-            } catch (Exception e) {
-                log.error("Debezium 引擎运行异常", e);
-            }
-        });
+        // 直接在当前线程阻塞运行；由外部调用方负责把本方法放进独立线程。
+        engine.run();
     }
 
     /**
      * 优雅关闭 Debezium 引擎。
      * <p>
-     * 会等待引擎处理完已收到的事件后停止。
+     * 会等待引擎处理完已收到的事件后停止，并释放 MySQL 上的 Binlog Dump 连接。
      * </p>
      */
     public void stop() {
@@ -127,12 +115,30 @@ public class DebeziumChangeDataCapture {
 
         try {
             JsonNode root = MAPPER.readTree(value);
-            String op = root.path("op").asText("");
-            JsonNode source = root.path("source");
+
+            // Debezium 内嵌引擎用 JsonConverter（Json.class）输出的是 Connect 标准格式：
+            //   { "schema": {...}, "payload": { "op": "...", "source": {...}, "before": {...}, "after": {...} } }
+            // op / source / before / after 都在 payload 层，而不是顶层。
+            // 这与 Flink 版 JsonDebeziumDeserializationSchema 输出的扁平 envelope 不同。
+            JsonNode payload = root.path("payload");
+            if (payload.isMissingNode()) {
+                // 非标准事件（如 Heartbeat），无 payload，直接跳过
+                log.debug("[Debezium-Skip] 无 payload 的事件，跳过: {}", value);
+                return;
+            }
+
+            String op = payload.path("op").asText("");
+            JsonNode source = payload.path("source");
             String db = source.path("db").asText("unknown");
             String table = source.path("table").asText("unknown");
-            JsonNode before = root.path("before");
-            JsonNode after = root.path("after");
+            JsonNode before = payload.path("before");
+            JsonNode after = payload.path("after");
+
+            // 心跳事件等无 op 的消息不打印 WARN，避免刷屏
+            if (op.isEmpty()) {
+                log.debug("[Debezium-Skip] 无 op 的事件（心跳/DDL），跳过: {}", value);
+                return;
+            }
 
             switch (op) {
                 case "c": // create → INSERT
@@ -196,6 +202,7 @@ public class DebeziumChangeDataCapture {
         // MySQL 连接
         props.setProperty("database.hostname", HOST);
         props.setProperty("database.port", String.valueOf(PORT));
+        // PORT 现在是 int，上面的 String.valueOf 保留（Debezium 属性统一为 String）
         props.setProperty("database.user", USERNAME);
         props.setProperty("database.password", PASSWORD);
 

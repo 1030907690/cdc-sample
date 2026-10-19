@@ -4,6 +4,7 @@ import com.zzq.cdc.DebeziumChangeDataCapture;
 import com.zzq.cdc.FlinkChangeDataCapture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -28,9 +29,18 @@ import org.springframework.stereotype.Component;
  * <p>两种实现都监听 MySQL {@code jjjy181} 库的增删改，数据源配置相同。</p>
  */
 @Component
-public class ApplicationRefreshedListener {
+public class ApplicationRefreshedListener implements DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationRefreshedListener.class);
+
+    /**
+     * 当前运行的 Debezium CDC 实例（仅当 {@link #CDC_IMPL} 为 {@code "debezium"} 时非空）。
+     * <p>
+     * 持有引用是为了应用关闭时能调用 {@link DebeziumChangeDataCapture#stop()}
+     * 优雅关闭引擎，避免 MySQL 残留 Binlog Dump 连接。
+     * </p>
+     */
+    private volatile DebeziumChangeDataCapture debeziumCdc;
 
     /**
      * CDC 监听实现切换开关：{@code "debezium"} 或 {@code "flink"}。
@@ -75,12 +85,27 @@ public class ApplicationRefreshedListener {
      * 启动 Debezium 内嵌引擎 CDC 监听（更轻量，不依赖 Flink）。
      */
     private void startDebeziumCdc() {
-        new Thread(() -> {
+        DebeziumChangeDataCapture cdc = new DebeziumChangeDataCapture();
+        this.debeziumCdc = cdc; // 持有引用，供 destroy() 优雅关闭
+        Thread worker = new Thread(() -> {
             try {
-                new DebeziumChangeDataCapture().start();
+                cdc.start();
             } catch (Exception e) {
                 log.error("Debezium CDC 启动或运行期间发生异常", e);
             }
-        }, "debezium-cdc-worker").start();
+        }, "debezium-cdc-worker");
+        worker.setDaemon(false); // 非 daemon：确保应用关闭前引擎有机会被 stop() 优雅关闭
+        worker.start();
+    }
+
+    /**
+     * 应用关闭时优雅关闭 CDC 引擎，释放 MySQL Binlog Dump 连接。
+     */
+    @Override
+    public void destroy() {
+        if (debeziumCdc != null) {
+            log.info("应用关闭，优雅停止 Debezium CDC 引擎...");
+            debeziumCdc.stop();
+        }
     }
 }
