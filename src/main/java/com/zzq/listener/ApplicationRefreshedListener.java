@@ -74,7 +74,7 @@ public class ApplicationRefreshedListener implements DisposableBean {
     private void startFlinkCdc() {
         new Thread(() -> {
             try {
-//                new FlinkChangeDataCapture().start();
+                new FlinkChangeDataCapture().start();
             } catch (Exception e) {
                 log.error("Flink CDC 启动或运行期间发生异常", e);
             }
